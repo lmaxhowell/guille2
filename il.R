@@ -1,5 +1,5 @@
 make.psi <- function(delta,kap,rho,gam){
-  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
+  states <- c("N","B1","LB","L_B","LB_","L_B_")
   # all five input arrays should be indexed by [time,age,state]
   Time <- dim(delta)[1]
   Ages <- dim(delta)[2]
@@ -8,28 +8,27 @@ make.psi <- function(delta,kap,rho,gam){
     stop("delta,kappa,rho and gamma must all have the same number of rows, corresponding to time")
   }
   psi <- array(0,dim=c(length(states),length(states),Time,Ages))
+  row.names(psi) <- states
+  colnames(psi) <- states
   for(t in 1:Time){
     for(a in 1:Ages){
       # psi[1,,t,a] <- c((1-epsilon[t,a,1])*(1-rho[t,a,1]),epsilon[t,a,2],(1-epsilon[t,a,3])*rho[t,a,3],0,0,0,0,0)
       # psi[2,,t,a] <- c((1-epsilon[t,a,1])*(1-rho[t,a,1]),epsilon[t,a,2],(1-epsilon[t,a,3])*rho[t,a,3],0,0,0,0,0)
-      psi[1,,t,a] <- c((1-rho[t,a,1]),rho[t,a,1],0,0,0,0,0)
-      row.names(psi) <- states
-      colnames(psi) <- states
+      psi[1,,t,a] <- c((1-rho[t,a,1]),rho[t,a,1],0,0,0,0)
       # this is if these rows depend on the ROWS theyre in
       for(i in 2:6){
         psi[i,,t,a] <- c(0,0,
                            (1-kap[t,a,i])*(1-delta[t,a,i])*gam[t,a,i],
                            (1-kap[t,a,i])*delta[t,a,i]*gam[t,a,i],
                            (1-kap[t,a,i])*(1-delta[t,a,i])*(1-gam[t,a,i]),
-                           (1-kap[t,a,i])*delta[t,a,i]*(1-gam[t,a,i]),
-                           kap[t,a,i])
+                           (1-kap[t,a,i])*delta[t,a,i]*(1-gam[t,a,i]))
       }
-      psi[7,,t,a] <- c(0,0,
-                       (1-delta[t,a,7])*gam[t,a,7],
-                       delta[t,a,7]*gam[t,a,7],
-                       (1-delta[t,a,7])*(1-gam[t,a,7]),
-                       delta[t,a,7]*(1-gam[t,a,7]),
-                       0)
+      # psi[7,,t,a] <- c(0,0,
+      #                  (1-delta[t,a,7])*gam[t,a,7],
+      #                  delta[t,a,7]*gam[t,a,7],
+      #                  (1-delta[t,a,7])*(1-gam[t,a,7]),
+      #                  delta[t,a,7]*(1-gam[t,a,7]),
+      #                  0)
       # # this is if these rows depend on the columns theyre in
       # for(i in 4:8){
       #   psi[i-1,,t,a] <- c(0,0,0,
@@ -94,6 +93,25 @@ Pr_rs <- function(r,s,t,a,phi,psi){
   return(prob)
 }
 
+# Chi <- function(r,t,a,phi,psi,p){
+#   # print(c(r,t,a))
+#   Time <- dim(phi)[1]+1
+#   if(t==Time){
+#     return(1)
+#   }else{
+#     if(r==1){
+#       prob <- 1-phi[t,a,r] + phi[t,a,r]*psi[r,1,t,a]*(1-p[t+1,a+1,1])*Chi(1,t+1,a+1,phi,psi,p)
+#     }else{
+#       
+#     }
+#     
+#     if(length(prob)==0){
+#       print(parent.frame(2)$ch)
+#     }
+#     return(prob)
+#   }
+# }
+
 Chi <- function(r,t,a,phi,psi,p){
   # print(c(r,t,a))
   Time <- dim(phi)[1]+1
@@ -103,7 +121,7 @@ Chi <- function(r,t,a,phi,psi,p){
     if(r==1){
       prob <- 1-phi[t,a,r] + phi[t,a,r]*psi[r,1,t,a]*(1-p[t+1,a+1,1])*Chi(1,t+1,a+1,phi,psi,p)
     }else{
-      
+      prob <- 1-phi[t,a,r] + sum(sapply(2:length(states),function(q) phi[t,a,r]*psi[r,q,t,a]*(1-p[t+1,a+1,q])*Chi(q,t+1,a+1,phi,psi,p)))
     }
     
     if(length(prob)==0){
@@ -113,181 +131,190 @@ Chi <- function(r,t,a,phi,psi,p){
   }
 }
 
-Y.fun <- function(t,a,tprime,phi,psi,p){
-  prob <- prod(sapply(t:(tprime-2),function(x) phi[x,a+x-t,1]*psi[1,1,x,a+x-t]*(1-p[x+1,a+x-t+1,1]) ))
-  return(prob)
-}
+# Y.fun <- function(t,a,tprime,phi,psi,p){
+#   prob <- prod(sapply(t:(tprime-2),function(x) phi[x,a+x-t,1]*psi[1,1,x,a+x-t]*(1-p[x+1,a+x-t+1,1]) ))
+#   return(prob)
+# }
 
-Q.prob <- function(t,a,tprime,r,phi,psi,p){
-  if((tprime-t)==1){
-    prob <- phi[tprime-1,a+tprime-t-1,1]*psi[1,r,tprime-1,a+tprime-t-1]*p[tprime,a+tprime-t,r]
-  }else if((tprime-t)>1){
-    prob <- Y.fun(t,a,tprime,phi,psi,p)*phi[tprime-1,a+tprime-t-1,1]*psi[1,r,tprime-1,a+tprime-t-1]*p[tprime,a+tprime-t,r]
-  }
-  return(prob)
-}
-
-Pr_r0 <- function(r,t,a,phi,psi){
-  skip <- which(row.names(psi)=="S")
-  if(r %in% 3:7){
-    if(t<(Time-1)){
-      prob <- phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip]) + (1-phi[t,a,r])
-    }else if(t==(Time-1)){
-      # if we are in a breeding state at Time-1 and then a zero at Time
-      # then they dont have to have died they could still be in the skipping state
-      # with no information about them being alive
-      prob <- phi[t,a,r]*psi[r,skip,t,a] + (1-phi[t,a,r])
-    }
-    # prob <- phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip]) + (1-phi[t,a,r])
-  # }else if(r==1){
-  }else if(r %in% 1:2){
-    prob <- Chi(r,t,a,phi,psi)
+Q.prob <- function(r,s,t,a,tprime,phi,psi,p){
+  if(t==(tprime-1)){
+    prob <- phi[t,a,r]*psi[r,s,t,a]*p[t+1,a+1,s]
   }else{
-    # stop(print("I shouldnt be here",r,t,a))
-  }
-  if(!exists("prob")){
-    print(c(r,t,a,as.vector(parent.frame()$ch),as.vector(parent.frame()$transitions)))
+    prob <- sum(sapply(1:length(states),function(q) phi[t,a,r]*psi[r,q,t,a]*(1-p[t+1,a+1,q])*Q.prob(q,s,t+1,a+1,tprime) ))
   }
   return(prob)
 }
 
-il <- function(ch,phi,psi){ # il is "individual likelihood"
-  # phi is indexed by [time,age,state]
-  # psi is indexed by [state_r,state_s,time,age]
-  Indicator <- function(prob){
-    # a function that checks if the probability pu into it will
-    # "cause problems" in the likelihood - i.e. if we log
-    # this probability will it be infinite and cause the whole ll
-    # to be infinite as a result
-    # or has a small amount of numerical error crept in
-    # and made a probability negative?
-    # in which case just set it to zero
-    # will add a warning in in this case
-    # this function just means we can call log(prob)
-    # without worrying about the errors this can cause
-    if(length(prob)==0){
-      print(c(parent.frame()$i,parent.frame()$t,parent.frame()$Time))
-      print(c("r",parent.frame()$current_state_index))
-      print(c("s",parent.frame()$next_state_index))
-      print(c("t",parent.frame()$current_time))
-      print(c("a",parent.frame()$current_age))
-      print(parent.frame()$ch)
-      View(parent.frame()$transitions)
-    }
-    if(!exists("prob") | is.na(prob)){
-      print(parent.frame()$ch)
-      print(parent.frame()$transitions)
-    }
-    if(prob<0){
-      return(0)
-    }else{
-      return(ifelse(is.finite(log(prob)),log(prob),0)) 
-    }
-  }
-  library(plyr, include.only = c("count"))
-  # just need the count function from this package
-  # to figure out how many unique chs there are
-  uch <- count(ch) # unique number of capture histories
-  # what are the states
-  states <- c("N","E","B1","LB","L_B","LB_","L_B_","S")
-  # number of columns of the chs minus is Time to account for the age column
-  Time <- ncol(ch)-1
-  # how many unique capture histories are there
-  Individuals <- nrow(uch)
-  ll_i <- rep(0,Individuals) # want to create an individual likelihood for each capture history
-  # L1 <- rep(0,Individuals)
-  # L2 <- rep(0,Individuals)
-  for(i in 1:Individuals){
-    ch <- uch[i,1:(Time+1)] # the current capture history we are looking at
-    # can rename ch to be "the current ch" because we no longer need ch, just uch
-    transitions <- find.transitions(ch)
-    # print(transitions)
-    # need to deal with all the capture histories that
-    # only have one state in them first
-    if(nrow(transitions)==1){
-      current_state <- transitions[1,1]
-      current_time <- transitions[1,3]
-      if(transitions[1,4]==(Time+1)){ # if this occurs at the final time...do nothing
-        next
-      }else if(transitions[1,2]!="0"){
-        current_state_index <- which(states==current_state) # what number is the current state
-        current_age <- transitions[1,5]
-        next_state_index <- which(states==transitions[1,2]) # what number is the next state
-        # L1[i] <- L1[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
-        ll_i[i] <- ll_i[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
-      }else{ # else we are in a Pr_r0 situation
-        current_state_index <- which(states==current_state) # what number is the current state
-        current_age <- transitions[1,5]
-        # print(c(current_state_index,current_time,current_age,dim(phi),dim(psi)))
-        # print(Indicator(Pr_r02(current_state_index,current_time,current_age,phi,psi)))
-        # L2[i] <- L2[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
-        ll_i[i] <- ll_i[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
-      }
-    }else{ # therefore ch has multiple observations
-      for(t in 1:nrow(transitions)){
-        if(transitions[t,4]==(Time+1)){ # in the situation where the final time point is an observed state and not a zero
-          next # then we just skip it
-        }else if((transitions[t,4]-transitions[t,3])==1){ # aka are the states next to each other and not a state in the final time
-          current_state_index <- which(states==transitions[t,1]) # what number is the current state
-          current_time <- transitions[t,3]
-          current_age <- transitions[t,5]
-          # need to deal with if the transition is the final one, a state to zero
-          if(transitions[t,2]=="0"){
-            # L2[i] <- L2[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
-            # print(transitions[nrow(transitions),])
-            ll_i[i] <- ll_i[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
-          }else{
-            next_state_index <- which(states==transitions[t,2]) # what number is the next state
-            # print(c(Pr_rs2(current_state_index,next_state_index,current_time,current_age,phi,psi),current_state_index,next_state_index,current_time,current_age))
-            # L1[i] <- L1[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
-            ll_i[i] <- ll_i[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
-          } # end else
-        } # all the states should now be next to each other so commented out the next bit
-        # }else if((transitions[t,4]-transitions[t,3])==2 & transitions[t,1]!="N"){ # we have a skipped a time and it was previously breeding
-        #   current_state_index <- which(states==transitions[t,1]) # what number is the current state
-        #   next_state_index <- which(states==transitions[t,2]) # what number is the next state
-        #   current_time <- transitions[t,3]
-        #   ll_i[i] <- ll_i[i] + Indicator(Pr_r0s(current_state_index,next_state_index,current_time,phi,psi))
-        # }else if(((transitions[t,4]-transitions[t,3])==2 & transitions[t,1]=="N") | 
-        #          ((transitions[t,4]-transitions[t,3])>2)){
-        #   # we have a skipped a time and it was NOT previously breeding OR
-        #   # we have skipped multiple times (and so theoretically should not be breeding) OR
-        #   current_state_index <- which(states==transitions[t,1]) # what number is the current state
-        #   current_time <- transitions[t,3]
-        #   ll_i[i] <- ll_i[i] + Indicator(Pr_r0(current_state_index,current_time,phi,psi))
-        # }
-        # print(transitions[t,])
-        # print(c(t,ll_i[i]))
-      } # end for t in transitions
-    } # end else ch has multiple observations
-    # print(i)
-  } # end i
-  # LL1 <- sum((uch$freq)*(L1))
-  # LL2 <- sum((uch$freq)*(L2))
-  ll <- sum((uch$freq)*(ll_i)) # multiply the log-likelihood for each unique capture history
-  # by how many times that capture history occurs and sum it up
-  # to make the multinomial loglikelihood
-  return(ll)
-  # return(c(ll,LL1,LL2,LL1+LL2))
-}
+# Q.prob <- function(t,a,tprime,r,phi,psi,p){
+#   if((tprime-t)==1){
+#     prob <- phi[tprime-1,a+tprime-t-1,1]*psi[1,r,tprime-1,a+tprime-t-1]*p[tprime,a+tprime-t,r]
+#   }else if((tprime-t)>1){
+#     prob <- Y.fun(t,a,tprime,phi,psi,p)*phi[tprime-1,a+tprime-t-1,1]*psi[1,r,tprime-1,a+tprime-t-1]*p[tprime,a+tprime-t,r]
+#   }
+#   return(prob)
+# }
 
-ll.il <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,ch){
-  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
-  
-  phi <- untrans(logistic(theta[phi.ind]),struc$phi$age,struc$phi$time,struc$phi$state)
-  delt <- untrans(logistic(theta[delt.ind]),struc$delt$age,struc$delt$time,struc$delt$state)
-  kap <- untrans(logistic(theta[kap.ind]),struc$kap$age,struc$kap$time,struc$kap$state)
-  rho <- untrans(logistic(theta[rho.ind]),struc$rho$age,struc$rho$time,struc$rho$state)
-  gam <- untrans(logistic(theta[gam.ind]),struc$gam$age,struc$gam$time,struc$gam$state)
-  p <- untrans(logistic(theta[p.ind]),struc$p$age,struc$p$time,struc$p$state)
-  
-  psi <- make.psi(delt,kap,rho,gam,eps,p)
-  # print(psi)
-  
-  ll <- il(ch,phi,psi)
-  
-  return(ll)
-}
+# Pr_r0 <- function(r,t,a,phi,psi){
+#   skip <- which(row.names(psi)=="S")
+#   if(r %in% 3:7){
+#     if(t<(Time-1)){
+#       prob <- phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip]) + (1-phi[t,a,r])
+#     }else if(t==(Time-1)){
+#       # if we are in a breeding state at Time-1 and then a zero at Time
+#       # then they dont have to have died they could still be in the skipping state
+#       # with no information about them being alive
+#       prob <- phi[t,a,r]*psi[r,skip,t,a] + (1-phi[t,a,r])
+#     }
+#     # prob <- phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip]) + (1-phi[t,a,r])
+#   # }else if(r==1){
+#   }else if(r %in% 1:2){
+#     prob <- Chi(r,t,a,phi,psi)
+#   }else{
+#     # stop(print("I shouldnt be here",r,t,a))
+#   }
+#   if(!exists("prob")){
+#     print(c(r,t,a,as.vector(parent.frame()$ch),as.vector(parent.frame()$transitions)))
+#   }
+#   return(prob)
+# }
+
+# il <- function(ch,phi,psi){ # il is "individual likelihood"
+#   # phi is indexed by [time,age,state]
+#   # psi is indexed by [state_r,state_s,time,age]
+#   Indicator <- function(prob){
+#     # a function that checks if the probability pu into it will
+#     # "cause problems" in the likelihood - i.e. if we log
+#     # this probability will it be infinite and cause the whole ll
+#     # to be infinite as a result
+#     # or has a small amount of numerical error crept in
+#     # and made a probability negative?
+#     # in which case just set it to zero
+#     # will add a warning in in this case
+#     # this function just means we can call log(prob)
+#     # without worrying about the errors this can cause
+#     if(length(prob)==0){
+#       print(c(parent.frame()$i,parent.frame()$t,parent.frame()$Time))
+#       print(c("r",parent.frame()$current_state_index))
+#       print(c("s",parent.frame()$next_state_index))
+#       print(c("t",parent.frame()$current_time))
+#       print(c("a",parent.frame()$current_age))
+#       print(parent.frame()$ch)
+#       View(parent.frame()$transitions)
+#     }
+#     if(!exists("prob") | is.na(prob)){
+#       print(parent.frame()$ch)
+#       print(parent.frame()$transitions)
+#     }
+#     if(prob<0){
+#       return(0)
+#     }else{
+#       return(ifelse(is.finite(log(prob)),log(prob),0)) 
+#     }
+#   }
+#   library(plyr, include.only = c("count"))
+#   # just need the count function from this package
+#   # to figure out how many unique chs there are
+#   uch <- count(ch) # unique number of capture histories
+#   # what are the states
+#   states <- c("N","E","B1","LB","L_B","LB_","L_B_","S")
+#   # number of columns of the chs minus is Time to account for the age column
+#   Time <- ncol(ch)-1
+#   # how many unique capture histories are there
+#   Individuals <- nrow(uch)
+#   ll_i <- rep(0,Individuals) # want to create an individual likelihood for each capture history
+#   # L1 <- rep(0,Individuals)
+#   # L2 <- rep(0,Individuals)
+#   for(i in 1:Individuals){
+#     ch <- uch[i,1:(Time+1)] # the current capture history we are looking at
+#     # can rename ch to be "the current ch" because we no longer need ch, just uch
+#     transitions <- find.transitions(ch)
+#     # print(transitions)
+#     # need to deal with all the capture histories that
+#     # only have one state in them first
+#     if(nrow(transitions)==1){
+#       current_state <- transitions[1,1]
+#       current_time <- transitions[1,3]
+#       if(transitions[1,4]==(Time+1)){ # if this occurs at the final time...do nothing
+#         next
+#       }else if(transitions[1,2]!="0"){
+#         current_state_index <- which(states==current_state) # what number is the current state
+#         current_age <- transitions[1,5]
+#         next_state_index <- which(states==transitions[1,2]) # what number is the next state
+#         # L1[i] <- L1[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
+#         ll_i[i] <- ll_i[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
+#       }else{ # else we are in a Pr_r0 situation
+#         current_state_index <- which(states==current_state) # what number is the current state
+#         current_age <- transitions[1,5]
+#         # print(c(current_state_index,current_time,current_age,dim(phi),dim(psi)))
+#         # print(Indicator(Pr_r02(current_state_index,current_time,current_age,phi,psi)))
+#         # L2[i] <- L2[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
+#         ll_i[i] <- ll_i[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
+#       }
+#     }else{ # therefore ch has multiple observations
+#       for(t in 1:nrow(transitions)){
+#         if(transitions[t,4]==(Time+1)){ # in the situation where the final time point is an observed state and not a zero
+#           next # then we just skip it
+#         }else if((transitions[t,4]-transitions[t,3])==1){ # aka are the states next to each other and not a state in the final time
+#           current_state_index <- which(states==transitions[t,1]) # what number is the current state
+#           current_time <- transitions[t,3]
+#           current_age <- transitions[t,5]
+#           # need to deal with if the transition is the final one, a state to zero
+#           if(transitions[t,2]=="0"){
+#             # L2[i] <- L2[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
+#             # print(transitions[nrow(transitions),])
+#             ll_i[i] <- ll_i[i] + Indicator(Pr_r0(current_state_index,current_time,current_age,phi,psi))
+#           }else{
+#             next_state_index <- which(states==transitions[t,2]) # what number is the next state
+#             # print(c(Pr_rs2(current_state_index,next_state_index,current_time,current_age,phi,psi),current_state_index,next_state_index,current_time,current_age))
+#             # L1[i] <- L1[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
+#             ll_i[i] <- ll_i[i] + Indicator(Pr_rs(current_state_index,next_state_index,current_time,current_age,phi,psi))
+#           } # end else
+#         } # all the states should now be next to each other so commented out the next bit
+#         # }else if((transitions[t,4]-transitions[t,3])==2 & transitions[t,1]!="N"){ # we have a skipped a time and it was previously breeding
+#         #   current_state_index <- which(states==transitions[t,1]) # what number is the current state
+#         #   next_state_index <- which(states==transitions[t,2]) # what number is the next state
+#         #   current_time <- transitions[t,3]
+#         #   ll_i[i] <- ll_i[i] + Indicator(Pr_r0s(current_state_index,next_state_index,current_time,phi,psi))
+#         # }else if(((transitions[t,4]-transitions[t,3])==2 & transitions[t,1]=="N") | 
+#         #          ((transitions[t,4]-transitions[t,3])>2)){
+#         #   # we have a skipped a time and it was NOT previously breeding OR
+#         #   # we have skipped multiple times (and so theoretically should not be breeding) OR
+#         #   current_state_index <- which(states==transitions[t,1]) # what number is the current state
+#         #   current_time <- transitions[t,3]
+#         #   ll_i[i] <- ll_i[i] + Indicator(Pr_r0(current_state_index,current_time,phi,psi))
+#         # }
+#         # print(transitions[t,])
+#         # print(c(t,ll_i[i]))
+#       } # end for t in transitions
+#     } # end else ch has multiple observations
+#     # print(i)
+#   } # end i
+#   # LL1 <- sum((uch$freq)*(L1))
+#   # LL2 <- sum((uch$freq)*(L2))
+#   ll <- sum((uch$freq)*(ll_i)) # multiply the log-likelihood for each unique capture history
+#   # by how many times that capture history occurs and sum it up
+#   # to make the multinomial loglikelihood
+#   return(ll)
+#   # return(c(ll,LL1,LL2,LL1+LL2))
+# }
+# 
+# ll.il <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,ch){
+#   states <- c("N","B1","LB","L_B","LB_","L_B_")
+#   
+#   phi <- untrans(logistic(theta[phi.ind]),struc$phi$age,struc$phi$time,struc$phi$state)
+#   delt <- untrans(logistic(theta[delt.ind]),struc$delt$age,struc$delt$time,struc$delt$state)
+#   kap <- untrans(logistic(theta[kap.ind]),struc$kap$age,struc$kap$time,struc$kap$state)
+#   rho <- untrans(logistic(theta[rho.ind]),struc$rho$age,struc$rho$time,struc$rho$state)
+#   gam <- untrans(logistic(theta[gam.ind]),struc$gam$age,struc$gam$time,struc$gam$state)
+#   p <- untrans(logistic(theta[p.ind]),struc$p$age,struc$p$time,struc$p$state)
+#   
+#   psi <- make.psi(delt,kap,rho,gam,eps,p)
+#   # print(psi)
+#   
+#   ll <- il(ch,phi,psi)
+#   
+#   return(ll)
+# }
 
 source("suff.stat.R")
 
@@ -322,80 +349,92 @@ sl <- function(phi,psi,p,mv){ # sl is sufficient statistic likelihood
       return(ifelse(is.finite(log(prob)),log(prob),0)) 
     }
   }
-  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
-  mB <- mv$mB
-  mN <- mv$mN
+  states <- c("N","B1","LB","L_B","LB_","L_B_")
+  # mB <- mv$mB
+  # mN <- mv$mN
+  m <- mv$m
   v <- mv$v
-  Time <- dim(mv$mB)[3]
+  Time <- dim(m)[3]
   Age <- Time
   
   if(is.null(unlist(mv$violations))==FALSE){
     warning("some transitions not allowed")
   }
   
-  probs.mB <- array(0,dim=dim(mB)) # r,s,t,a
-  probs.mN <- array(0,dim=dim(mN)) # r,t,a,t'
+  # probs.mB <- array(0,dim=dim(mB)) # r,s,t,a
+  # probs.mN <- array(0,dim=dim(mN)) # r,t,a,t'
+  probs.m <- array(0,dim=dim(m)) # r,s,t,a,t'
   probs.v <- array(0,dim=dim(v)) # r,t,a
   
-  skip <- which(row.names(psi)=="S")
+  # skip <- which(row.names(psi)=="S")
   for(t in 1:Time){
     for(a in 1:Age){
       for(r in 1:length(states)){
         for(s in 1:length(states)){
-          if(mB[r,s,t,a]>0){
-            probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a]*p[t+1,a+1,s])
-            if(is.infinite((probs.mB[r,s,t,a]))){
-              print(c(r,s,t,a))
+          for(tprime in 1:length(Time)){
+            if(m[r,s,t,a,tprime]>0){
+              probs.m[r,s,t,a,tprime] <- log(Q.prob(r,s,t,a,tprime,phi,psi,p))
             }
-            # probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a])
           }
+          # if(mB[r,s,t,a]>0){
+          #   probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a]*p[t+1,a+1,s])
+          #   if(is.infinite((probs.mB[r,s,t,a]))){
+          #     print(c(r,s,t,a))
+          #   }
+          #   # probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a])
+          # }
         }
-        if(r==1){
-          if(v[r,t,a]>0){
-            # print(c(r,t,a))
-            probs.v[r,t,a] <- log(Chi(r,t,a,phi,psi,p))
-          }
-        }else if(r %in% 2:6){
-          if(t<(Time-1)){
-            if(v[r,t,a]>0){
-              # print(c(r,t,a))
-              # print(c(r,t,a))
-              # print(c(phi[t,a,r],psi[r,skip,t,a],(1-phi[t+1,a+1,skip]),(1-phi[t,a,r])))
-              probs.v[r,t,a] <- log(phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip]) + (1-phi[t,a,r]))
-              # print(probs.v[r,t,a])
-            }
-          }else if(t==(Time-1)){
-            # if we are in a breeding state at Time-1 and then a zero at Time
-            # then they dont have to have died they could still be in the skipping state
-            # with no information about them being alive
-            if(v[r,t,a]>0){
-              # print(c(r,t,a))
-              # probs.v[r,t,a] <- log(phi[t,a,r]*psi[r,skip,t,a]*p[t+1,a+1,skip] + (1-phi[t,a,r]))
-              probs.v[r,t,a] <- log(phi[t,a,r]*psi[r,skip,t,a] + (1-phi[t,a,r]))
-            }
-          } # end elif t==Time-1
-        } # end if r in 2:6
+        if(v[r,t,a]>0){
+          # print(c(r,t,a))
+          probs.v[r,t,a] <- log(Chi(r,t,a,phi,psi,p))
+        }
+        # if(r==1){
+        #   if(v[r,t,a]>0){
+        #     # print(c(r,t,a))
+        #     probs.v[r,t,a] <- log(Chi(r,t,a,phi,psi,p))
+        #   }
+        # }else if(r %in% 2:6){
+        #   if(t<(Time-1)){
+        #     if(v[r,t,a]>0){
+        #       # print(c(r,t,a))
+        #       # print(c(r,t,a))
+        #       # print(c(phi[t,a,r],psi[r,skip,t,a],(1-phi[t+1,a+1,skip]),(1-phi[t,a,r])))
+        #       probs.v[r,t,a] <- log(phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip]) + (1-phi[t,a,r]))
+        #       # print(probs.v[r,t,a])
+        #     }
+        #   }else if(t==(Time-1)){
+        #     # if we are in a breeding state at Time-1 and then a zero at Time
+        #     # then they dont have to have died they could still be in the skipping state
+        #     # with no information about them being alive
+        #     if(v[r,t,a]>0){
+        #       # print(c(r,t,a))
+        #       # probs.v[r,t,a] <- log(phi[t,a,r]*psi[r,skip,t,a]*p[t+1,a+1,skip] + (1-phi[t,a,r]))
+        #       probs.v[r,t,a] <- log(phi[t,a,r]*psi[r,skip,t,a] + (1-phi[t,a,r]))
+        #     }
+        #   } # end elif t==Time-1
+        # } # end if r in 2:6
       } # end r in States
-      for(tprime in t:Time){
-        for(r in 1:2){
-          if(mN[r,t,a,tprime]>0){
-            # print(c(r,t,a,tprime))
-            probs.mN[r,t,a,tprime] <- log(Q.prob(t,a,tprime,r,phi,psi,p))
-          }
-        } # end r  in 1:2
-      } # end tprime in t:Time
+      # for(tprime in t:Time){
+      #   for(r in 1:2){
+      #     if(mN[r,t,a,tprime]>0){
+      #       # print(c(r,t,a,tprime))
+      #       probs.mN[r,t,a,tprime] <- log(Q.prob(t,a,tprime,r,phi,psi,p))
+      #     }
+      #   } # end r  in 1:2
+      # } # end tprime in t:Time
     } # end a in Age
   } # end t in Time
   # print(c(dim(probs.mB),0,dim(mB)))
   # print(c(dim(probs.mN),0,dim(mN)))
   # print(c(dim(probs.v),0,dim(v)))
-  ll <- probs.mB%*%mB + probs.mN%*%mN + probs.v%*%v
+  # ll <- probs.mB%*%mB + probs.mN%*%mN + probs.v%*%v
+  ll <- probs.m%*%m + probs.v%*%v
   return(as.numeric(ll))
   # return(list("probs.mB"=probs.mB,"probs.mN"=probs.mN,"probs.v"=probs.v,"ll"=as.numeric(ll)))
 }
 
 ll.sl <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,mv){
-  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
+  states <- c("N","B1","LB","L_B","LB_","L_B_")
   
   phi <- untrans(logistic(theta[phi.ind]),struc$phi$age,struc$phi$time,struc$phi$state)
   delt <- untrans(logistic(theta[delt.ind]),struc$delt$age,struc$delt$time,struc$delt$state)
@@ -411,13 +450,14 @@ ll.sl <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,mv)
   #   onesandzeros <- c(rep(1,length(struc$p$age)+length(struc$p$time)),rep(0,length(struc$p$age)+length(struc$p$time)))
   # }
   
-  onesandzeros <- c(rep(1,length(p.ind)),rep(0,length(p.ind)))
-  p <- untrans(c(logistic(theta[p.ind]),onesandzeros),struc$p$age,struc$p$time,list(1,2:6,length(states)))
+  # onesandzeros <- c(rep(1,length(p.ind)),rep(0,length(p.ind)))
+  # p <- untrans(c(logistic(theta[p.ind]),onesandzeros),struc$p$age,struc$p$time,list(1,2:length(states)))
+  p <- untrans(logistic(theta[p.ind]),struc$p$age,struc$p$time,struc$p$state)
   # print(p[,1,])
   # print(p[,2,])
   # print(p[,3,])
-  print(phi[1,,])
-  print(phi[2,,])
+  # print(phi[1,,])
+  # print(phi[2,,])
   # print(p.ind)
   # print(theta[p.ind])
   # if(all(unlist(Map(`%in%`,struc$p$state,list(1,2:length(states)))))){
@@ -456,7 +496,7 @@ phi.trans <- function(alpha,beta,beta.struc){
 }
 
 ll.sl2 <- function(theta,ageclasses,timeclasses,beta.struc,mv){
-  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
+  states <- c("N","B1","LB","L_B","LB_","L_B_")
   
   phi.trans <- function(alpha,beta,beta.struc){
     # inputs should be vectors

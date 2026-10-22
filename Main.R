@@ -5,14 +5,14 @@ lapply(file.names, source) # source all functions needed
 
 load("guillemot.RData")
 Time <- 16
-states <- c("N","B1","LB","L_B","LB_","L_B_","S")
+states <- c("N","B1","LB","L_B","LB_","L_B_")
 struc <- list("phi"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
               "delt"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
               "kap"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
               "rho"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
               "gam"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
-              "p"=list("age"=list(1:Time),"time"=list(1:6,7:Time),"state"=list(1,2:6,length(states))))
-theta <- logit(c(0.6,0.5,0.4,0.2,0.7,0.8,0.4))
+              "p"=list("age"=list(1:Time),"time"=list(1:6,7:Time),"state"=list(1,2:length(states))))
+theta <- logit(c(0.6,0.5,0.4,0.2,0.7,0.4,0.9))
 ni.s <- list()
 for(i in 1:length(ni2[1:15])){
   ni.s[[i]] <- rep("N",length(ni2[[i]]))
@@ -133,3 +133,43 @@ op3 <- optim(rep(0,length(theta3)),
 op3$convergence
 logistic(op3$par)
 
+df.t <- data.frame("t"=rep(NA,length(2:15)),"chi"=rep(NA,length(2:15)),"time"=rep(NA,length(2:15)))
+for(t in 15:2){
+  i <- 15-t+2-1
+  t.start <- Sys.time()
+  val <- Chi(2,t,2,phi,psi,p)
+  t.end <- Sys.time()
+  t.diff <- difftime(t.end,t.start,units="secs")
+  df.t[i,] <- list(15-t+2,val,t.diff)
+  print(t)
+  if(t.diff>90){
+    for(q in t:2){
+      df.t[15-q+2,] <- list(15-q+2,val,t.diff)
+    }
+    break()
+  }
+}
+ggplot(df.t,aes(t,time)) + geom_line()
+ggplot(df.t,aes(t,chi)) + geom_line()
+
+df.t2 <- data.frame("r"=rep(states[2:6],each=length(2:15)),"t"=rep(2:15,length(2:6)),"chi"=rep(NA,length(2:6)*length(2:15)),"time"=rep(NA,length(2:6)*length(2:15)))
+for(r in 2:length(states)){
+  i <- seq(1,84,14)[r-1]
+  for(t in 15:2){
+    t.start <- Sys.time()
+    val <- Chi(r,t,2,phi,psi,p)
+    t.end <- Sys.time()
+    t.diff <- difftime(t.end,t.start,units="secs")
+    df.t2[i+15-t,3:4] <- list(val,t.diff)
+    print(c(r,t,i))
+    if(t.diff>90){
+      for(q in t:2){
+        df.t2[i+15-q,3:4] <- list(val,t.diff)
+      }
+      break()
+    }
+  }
+}
+ggplot(df.t2,aes(t,time,col=r)) + geom_line()
+ggplot(df.t2,aes(t,chi,col=r)) + geom_line()
+ 

@@ -70,7 +70,7 @@ dat.simulate2 <- function(phi,psi,p,ni.a,ni.s,seed=0){
   # ni.a should be a list of vectors of starting ages, the length of each vector
   # being the number of individuals released that time
   # ni.a should be the same dim as ni.a but with starting states
-  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
+  states <- c("N","B1","LB","L_B","LB_","L_B_")
   
   Time <- length(ni.a)+1
   # ni.a is the number of individuals ringed at each occasion
@@ -108,16 +108,13 @@ dat.simulate2 <- function(phi,psi,p,ni.a,ni.s,seed=0){
         survive <- rbinom(1,1,phi[t,current.age,current.state]) # do they survive
         if(survive==1){ # if they do survive
           theygo <- which(rmultinom(1,1,psi[current.state,,t,current.age])==1) # the state index they transition to
-          if(theygo==1){
-            captured <- rbinom(1,1,p[t+1,current.age+1,theygo]) # do they get recaptured
-            if(captured==1){
-              df[i+addtoi,t+1] <- states[theygo]
-            }else{
-              df[i+addtoi,t+1] <- 0
-            }
-          }else{
+          captured <- rbinom(1,1,p[t+1,current.age+1,theygo]) # do they get recaptured
+          if(captured==1){
             df[i+addtoi,t+1] <- states[theygo]
+          }else{
+            df[i+addtoi,t+1] <- 0
           }
+          # df[i+addtoi,t+1] <- states[theygo]
           current.state <- theygo
           current.age <- current.age + 1
         }else{ # they die and we skip to the next individual
@@ -134,16 +131,14 @@ dat.simulate2 <- function(phi,psi,p,ni.a,ni.s,seed=0){
           break # this is the skip to the next individual
         }
       } # end for every t
-      wdf <- tail(which(df[i+addtoi,1:Time] %in% states[-c(7)]),1) # what time did the last state occur that wasnt "S"
-      wdf2 <- tail(which(df[i+addtoi,1:Time] %in% states[c(7)]),1) # what time did the last state occur that was "S"
-      # wdf <- tail(which(df[i+addtoi,1:Time] %in% states[-c(8)]),1) # what time did the last state occur that wasnt "S" or "N_"
-      # wdf2 <- tail(which(df[i+addtoi,1:Time] %in% states[c(8)]),1) # what time did the last state occur that was "S" or "N_"
-      if(length(wdf2)>0){ # if we have skips
-        if(wdf2>wdf){ # if the last skip is after the last of any other state
-          # print(df[i+addtoi,1:Time])
-          df[i+addtoi,(wdf+1):Time] <- "0" # replace those "S" with "0"
-        } # end if wdf2>wdf
-      } # end if wdf2>0
+      # wdf <- tail(which(df[i+addtoi,1:Time] %in% states[-c(7)]),1) # what time did the last state occur that wasnt "S"
+      # wdf2 <- tail(which(df[i+addtoi,1:Time] %in% states[c(7)]),1) # what time did the last state occur that was "S"
+      # if(length(wdf2)>0){ # if we have skips
+      #   if(wdf2>wdf){ # if the last skip is after the last of any other state
+      #     # print(df[i+addtoi,1:Time])
+      #     df[i+addtoi,(wdf+1):Time] <- "0" # replace those "S" with "0"
+      #   } # end if wdf2>wdf
+      # } # end if wdf2>0
     } # end for every individuals
   } # end for every cohort release rn
   return(df)
@@ -165,9 +160,10 @@ dat.sim.wrap <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,st
   #   onesandzeros <- c(rep(1,length(struc$p$age)+length(struc$p$time)),rep(0,length(struc$p$age)+length(struc$p$time)))
   # }
   
-  onesandzeros <- c(rep(1,length(p.ind)),rep(0,length(p.ind)))
-  p <- untrans(c(logistic(theta[p.ind]),onesandzeros),struc$p$age,struc$p$time,list(1,2:6,length(states)))
-  # print(p[,1,])
+  # onesandzeros <- c(rep(1,length(p.ind)),rep(0,length(p.ind)))
+  # p <- untrans(c(logistic(theta[p.ind]),onesandzeros),struc$p$age,struc$p$time,list(1,2:6,length(states)))
+  p <- untrans(logistic(theta[p.ind]),struc$p$age,struc$p$time,struc$p$state)
+  print(p[,1,])
   # print(phi[1,,])
   # print(p.ind)
   # print(theta[p.ind])
