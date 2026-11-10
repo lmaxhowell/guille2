@@ -1,7 +1,7 @@
 suff.stat <- function(ch){
-  states <- c("N","B1","LB","L_B","LB_","L_B_")
+  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
   Time <- ncol(ch)-1
-  B <- states[-1]
+  # B <- states[-1]
   
   Agesi <- ch[,ncol(ch)]
   ch <- ch[,-ncol(ch)]
@@ -62,7 +62,9 @@ suff.stat <- function(ch){
         # }
       }
       r <- which(states==ch[i,wh[length(wh)]])
-      v[r,wh[length(wh)],wh[length(wh)]+Agesi[i]-1] <- v[r,wh[length(wh)],wh[length(wh)]+Agesi[i]-1] + 1
+      t <- wh[length(wh)]
+      a <- Agesi[i]+t-wh[1]
+      v[r,t,a] <- v[r,t,a] + 1
     }
   }
   # mB2 <- rowSums(mB,dims = 2)

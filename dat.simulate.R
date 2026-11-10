@@ -108,15 +108,21 @@ dat.simulate2 <- function(phi,psi,p,ni.a,ni.s,seed=0){
         survive <- rbinom(1,1,phi[t,current.age,current.state]) # do they survive
         if(survive==1){ # if they do survive
           theygo <- which(rmultinom(1,1,psi[current.state,,t,current.age])==1) # the state index they transition to
-          if(theygo==1){
-            captured <- rbinom(1,1,p[t+1,current.age+1,theygo]) # do they get recaptured
-            if(captured==1){
-              df[i+addtoi,t+1] <- states[theygo]
-            }else{
-              df[i+addtoi,t+1] <- 0
-            }
-          }else{
+          # if(theygo==1){
+          #   captured <- rbinom(1,1,p[t+1,current.age+1,theygo]) # do they get recaptured
+          #   if(captured==1){
+          #     df[i+addtoi,t+1] <- states[theygo]
+          #   }else{
+          #     df[i+addtoi,t+1] <- 0
+          #   }
+          # }else{
+          #   df[i+addtoi,t+1] <- states[theygo]
+          # }
+          captured <- rbinom(1,1,p[t+1,current.age+1,theygo]) # do they get recaptured
+          if(captured==1){
             df[i+addtoi,t+1] <- states[theygo]
+          }else{
+            df[i+addtoi,t+1] <- 0
           }
           current.state <- theygo
           current.age <- current.age + 1
@@ -134,16 +140,16 @@ dat.simulate2 <- function(phi,psi,p,ni.a,ni.s,seed=0){
           break # this is the skip to the next individual
         }
       } # end for every t
-      wdf <- tail(which(df[i+addtoi,1:Time] %in% states[-c(7)]),1) # what time did the last state occur that wasnt "S"
-      wdf2 <- tail(which(df[i+addtoi,1:Time] %in% states[c(7)]),1) # what time did the last state occur that was "S"
+      # wdf <- tail(which(df[i+addtoi,1:Time] %in% states[-c(7)]),1) # what time did the last state occur that wasnt "S"
+      # wdf2 <- tail(which(df[i+addtoi,1:Time] %in% states[c(7)]),1) # what time did the last state occur that was "S"
       # wdf <- tail(which(df[i+addtoi,1:Time] %in% states[-c(8)]),1) # what time did the last state occur that wasnt "S" or "N_"
       # wdf2 <- tail(which(df[i+addtoi,1:Time] %in% states[c(8)]),1) # what time did the last state occur that was "S" or "N_"
-      if(length(wdf2)>0){ # if we have skips
-        if(wdf2>wdf){ # if the last skip is after the last of any other state
-          # print(df[i+addtoi,1:Time])
-          df[i+addtoi,(wdf+1):Time] <- "0" # replace those "S" with "0"
-        } # end if wdf2>wdf
-      } # end if wdf2>0
+      # if(length(wdf2)>0){ # if we have skips
+      #   if(wdf2>wdf){ # if the last skip is after the last of any other state
+      #     # print(df[i+addtoi,1:Time])
+      #     df[i+addtoi,(wdf+1):Time] <- "0" # replace those "S" with "0"
+      #   } # end if wdf2>wdf
+      # } # end if wdf2>0
     } # end for every individuals
   } # end for every cohort release rn
   return(df)
@@ -167,7 +173,7 @@ dat.sim.wrap <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,st
   
   onesandzeros <- c(rep(1,length(p.ind)),rep(0,length(p.ind)))
   p <- untrans(c(logistic(theta[p.ind]),onesandzeros),struc$p$age,struc$p$time,list(1,2:6,length(states)))
-  # print(p[,1,])
+  print(p[,1,])
   # print(phi[1,,])
   # print(p.ind)
   # print(theta[p.ind])

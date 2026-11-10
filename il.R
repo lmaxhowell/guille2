@@ -1,5 +1,5 @@
 make.psi <- function(delta,kap,rho,gam){
-  states <- c("N","B1","LB","L_B","LB_","L_B_")
+  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
   # all five input arrays should be indexed by [time,age,state]
   Time <- dim(delta)[1]
   Ages <- dim(delta)[2]
@@ -14,21 +14,22 @@ make.psi <- function(delta,kap,rho,gam){
     for(a in 1:Ages){
       # psi[1,,t,a] <- c((1-epsilon[t,a,1])*(1-rho[t,a,1]),epsilon[t,a,2],(1-epsilon[t,a,3])*rho[t,a,3],0,0,0,0,0)
       # psi[2,,t,a] <- c((1-epsilon[t,a,1])*(1-rho[t,a,1]),epsilon[t,a,2],(1-epsilon[t,a,3])*rho[t,a,3],0,0,0,0,0)
-      psi[1,,t,a] <- c((1-rho[t,a,1]),rho[t,a,1],0,0,0,0)
+      psi[1,,t,a] <- c((1-rho[t,a,1]),rho[t,a,1],0,0,0,0,0)
       # this is if these rows depend on the ROWS theyre in
       for(i in 2:6){
         psi[i,,t,a] <- c(0,0,
                            (1-kap[t,a,i])*(1-delta[t,a,i])*gam[t,a,i],
                            (1-kap[t,a,i])*delta[t,a,i]*gam[t,a,i],
                            (1-kap[t,a,i])*(1-delta[t,a,i])*(1-gam[t,a,i]),
-                           (1-kap[t,a,i])*delta[t,a,i]*(1-gam[t,a,i]))
+                           (1-kap[t,a,i])*delta[t,a,i]*(1-gam[t,a,i]),
+                           kap[t,a,i])
       }
-      # psi[7,,t,a] <- c(0,0,
-      #                  (1-delta[t,a,7])*gam[t,a,7],
-      #                  delta[t,a,7]*gam[t,a,7],
-      #                  (1-delta[t,a,7])*(1-gam[t,a,7]),
-      #                  delta[t,a,7]*(1-gam[t,a,7]),
-      #                  0)
+      psi[7,,t,a] <- c(0,0,
+                       (1-delta[t,a,7])*gam[t,a,7],
+                       delta[t,a,7]*gam[t,a,7],
+                       (1-delta[t,a,7])*(1-gam[t,a,7]),
+                       delta[t,a,7]*(1-gam[t,a,7]),
+                       0)
       # # this is if these rows depend on the columns theyre in
       # for(i in 4:8){
       #   psi[i-1,,t,a] <- c(0,0,0,
@@ -84,14 +85,14 @@ find.transitions <- function(ch){ # need to add in age as component
   } # end else more than one observation
 }
 
-Pr_rs <- function(r,s,t,a,phi,psi){
-  # print(c("r",r))
-  # print(c("s",s))
-  # print(c("t",t))
-  # print(c("a",a))
-  prob <- phi[t,a,r]*psi[r,s,t,a]
-  return(prob)
-}
+# Pr_rs <- function(r,s,t,a,phi,psi){
+#   # print(c("r",r))
+#   # print(c("s",s))
+#   # print(c("t",t))
+#   # print(c("a",a))
+#   prob <- phi[t,a,r]*psi[r,s,t,a]
+#   return(prob)
+# }
 
 # Chi <- function(r,t,a,phi,psi,p){
 #   # print(c(r,t,a))
@@ -115,13 +116,23 @@ Pr_rs <- function(r,s,t,a,phi,psi){
 Chi <- function(r,t,a,phi,psi,p){
   # print(c(r,t,a))
   Time <- dim(phi)[1]+1
+  skip <- which(row.names(psi)=="S")
   if(t==Time){
     return(1)
   }else{
     if(r==1){
       prob <- 1-phi[t,a,r] + phi[t,a,r]*psi[r,1,t,a]*(1-p[t+1,a+1,1])*Chi(1,t+1,a+1,phi,psi,p)
     }else{
-      prob <- 1-phi[t,a,r] + sum(sapply(2:length(states),function(q) phi[t,a,r]*psi[r,q,t,a]*(1-p[t+1,a+1,q])*Chi(q,t+1,a+1,phi,psi,p)))
+      # if(t<=9){
+      #   t <- 10
+      # }
+      # prob <- 1-phi[t,a,r] + sum(sapply(2:length(states),function(q) phi[t,a,r]*psi[r,q,t,a]*(1-p[t+1,a+1,q])*Chi(q,t+1,a+1,phi,psi,p)))
+      # prob <- 1-phi[t,a,r] + sum(sapply(2:length(states),function(x) phi[t,a,r]*psi[r,x,t,a]*(1-p[t+1,a+1,x])*Chi(x,t+1,a+1,phi,psi,p) ))
+      if(t==(Time-1)){
+        prob <- (1-phi[t,a,r]) + phi[t,a,r]*psi[r,skip,t,a]
+      }else{
+        prob <- (1-phi[t,a,r]) + phi[t,a,r]*psi[r,skip,t,a]*(1-phi[t+1,a+1,skip])
+      }
     }
     
     if(length(prob)==0){
@@ -139,8 +150,9 @@ Chi <- function(r,t,a,phi,psi,p){
 Q.prob <- function(r,s,t,a,tprime,phi,psi,p){
   if(t==(tprime-1)){
     prob <- phi[t,a,r]*psi[r,s,t,a]*p[t+1,a+1,s]
+    # print(c(prob,t,tprime))
   }else{
-    prob <- sum(sapply(1:length(states),function(q) phi[t,a,r]*psi[r,q,t,a]*(1-p[t+1,a+1,q])*Q.prob(q,s,t+1,a+1,tprime) ))
+    prob <- sum(sapply(1:length(states),function(q) phi[t,a,r]*psi[r,q,t,a]*(1-p[t+1,a+1,q])*Q.prob(q,s,t+1,a+1,tprime,phi,psi,p) ))
   }
   return(prob)
 }
@@ -299,7 +311,7 @@ Q.prob <- function(r,s,t,a,tprime,phi,psi,p){
 # }
 # 
 # ll.il <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,ch){
-#   states <- c("N","B1","LB","L_B","LB_","L_B_")
+#   states <- c("N","B1","LB","L_B","LB_","L_B_","S")
 #   
 #   phi <- untrans(logistic(theta[phi.ind]),struc$phi$age,struc$phi$time,struc$phi$state)
 #   delt <- untrans(logistic(theta[delt.ind]),struc$delt$age,struc$delt$time,struc$delt$state)
@@ -349,7 +361,7 @@ sl <- function(phi,psi,p,mv){ # sl is sufficient statistic likelihood
       return(ifelse(is.finite(log(prob)),log(prob),0)) 
     }
   }
-  states <- c("N","B1","LB","L_B","LB_","L_B_")
+  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
   # mB <- mv$mB
   # mN <- mv$mN
   m <- mv$m
@@ -434,7 +446,7 @@ sl <- function(phi,psi,p,mv){ # sl is sufficient statistic likelihood
 }
 
 ll.sl <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,mv){
-  states <- c("N","B1","LB","L_B","LB_","L_B_")
+  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
   
   phi <- untrans(logistic(theta[phi.ind]),struc$phi$age,struc$phi$time,struc$phi$state)
   delt <- untrans(logistic(theta[delt.ind]),struc$delt$age,struc$delt$time,struc$delt$state)
@@ -496,7 +508,7 @@ phi.trans <- function(alpha,beta,beta.struc){
 }
 
 ll.sl2 <- function(theta,ageclasses,timeclasses,beta.struc,mv){
-  states <- c("N","B1","LB","L_B","LB_","L_B_")
+  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
   
   phi.trans <- function(alpha,beta,beta.struc){
     # inputs should be vectors
