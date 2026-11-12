@@ -186,7 +186,7 @@ delt <- untrans(logistic(theta[2]),struc$delt$age,struc$delt$time,struc$delt$sta
 kap <- untrans(logistic(theta[3]),struc$kap$age,struc$kap$time,struc$kap$state)
 rho <- untrans(logistic(theta[4]),struc$rho$age,struc$rho$time,struc$rho$state)
 gam <- untrans(logistic(theta[5]),struc$gam$age,struc$gam$time,struc$gam$state)
-p <- untrans(logistic(theta[6]),struc$p$age,struc$p$time,struc$p$state)
+p <- untrans(c(logistic(theta[6]),1,0),struc$p$age,struc$p$time,struc$p$state)
 psi <- make.psi(delt,kap,rho,gam)
 
 mv$m[1,1,1,1,3]
@@ -227,6 +227,10 @@ mv$v[2,13,3]
 (1-phi[13,3,2]) + phi[13,3,2]*psi[2,7,13,3]*(1-phi[14,4,7])
 Chi(2,13,3,phi,psi,p)
 
+
+p <- untrans(c(seq(0.3,0.77,0.03),rep(1,16),rep(0,16)),struc$p$age,as.list(1:Time),struc$p$state)
+
+
 # all prob for individuals released at time 1 in state 1 at age 1
 sum(sapply(1:length(states),function(x) sapply(14:Time,function(y) Q.prob(1,x,13,1,y,phi,psi,p)))) + Chi(1,13,1,phi,psi,p)
 summingtime <- 0
@@ -240,6 +244,10 @@ for(x in 1:length(states)){
 summingtime
 Chi(1,13,1,phi,psi,p)
 summingtime + Chi(1,13,1,phi,psi,p)
+for(y in 14:Time){
+  print(sapply(1:7,function(x) Q.prob(1,x,13,1,y,phi,psi,p))) # because using Q.prob(1,1:7,13,1,16,phi,psi,p) sums the vector for tprime=15,16
+}
+
 
 
 nrows <- 5:20
