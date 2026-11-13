@@ -45,7 +45,7 @@ kap <- untrans(c(0.2),list(1:Time),list(1:(Time-1)),list(1:length(states)))
 rho <- untrans(c(0.1,0.4,0.7),list(1:3,4,5:Time),list(1:(Time-1)),list(1:length(states)))
 gam <- untrans(c(0.75),list(1:Time),list(1:(Time-1)),list(1:length(states)))
 psi <- make.psi(del,kap,rho,gam)
-p  <- untrans(c(0.8,0),list(1:Time),list(1:(Time)),list(1,2:length(states)))
+p  <- untrans(c(0.8,1,0),list(1:Time),list(1:(Time)),list(1,2:6,length(states)))
 
 Q.prob(1,1,4,1,phi,psi,p)
 phi[1,1,1]*psi[1,1,1,1]*(1-p[2,2,1])*phi[2,2,1]*psi[1,1,2,2]*(1-p[3,3,1])*phi[3,3,1]*psi[1,1,3,3]*p[4,4,1]
@@ -133,3 +133,21 @@ op3 <- optim(rep(0,length(theta3)),
 op3$convergence
 logistic(op3$par)
 
+#######
+dat2 <- dat.sim.wrap(theta2,1:3,4,5,6:8,9,10,struc2,ni2[1:15],ni.s,789456132)
+mv2 <- suff.stat(dat2)
+op2 <- optim(rep(0,length(theta2)),
+             ll.sl,
+             phi.ind=1:3,
+             delt.ind=4,
+             kap.ind=5,
+             rho.ind=6:8,
+             gam.ind=9,
+             p.ind=10,
+             struc=struc3,
+             mv=mv2,
+             control=list(maxit=10000,fnscale=-1),
+             hessian=TRUE)
+op2$convergence
+logistic(op2$par)
+logistic(theta2)
