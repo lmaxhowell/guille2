@@ -343,11 +343,11 @@ sl <- function(phi,psi,p,mv){ # sl is sufficient statistic likelihood
       for(r in 1:length(states)){
         for(s in 1:length(states)){
           if(mB[r,s,t,a]>0){
-            probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a]*p[t+1,a+1,s])
-            if(is.infinite((probs.mB[r,s,t,a]))){
-              print(c(r,s,t,a))
-            }
-            # probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a])
+            # probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a]*p[t+1,a+1,s])
+            # if(is.infinite((probs.mB[r,s,t,a]))){
+            #   print(c(r,s,t,a))
+            # }
+            probs.mB[r,s,t,a] <- log(phi[t,a,r]*psi[r,s,t,a])
           }
         }
         if(r==1){
@@ -416,8 +416,8 @@ ll.sl <- function(theta,phi.ind,delt.ind,kap.ind,rho.ind,gam.ind,p.ind,struc,mv)
   # print(p[,1,])
   # print(p[,2,])
   # print(p[,3,])
-  print(phi[1,,])
-  print(phi[2,,])
+  # print(phi[1,,])
+  # print(phi[2,,])
   # print(p.ind)
   # print(theta[p.ind])
   # if(all(unlist(Map(`%in%`,struc$p$state,list(1,2:length(states)))))){
