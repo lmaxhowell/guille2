@@ -113,6 +113,19 @@ Chi <- function(r,t,a,phi,psi,p){
   }
 }
 
+Chi2 <- function(r,t,a,phi,psi,p){
+  if(t==Time){
+    return(1)
+  }else{
+    prob <- rep(0,Time)
+    prob[Time] <- 1
+    for(ti in (Time-1):t){
+      prob[ti] <- 1-phi[ti,a+ti-t,r] + phi[ti,a+ti-t,r]*psi[r,1,ti,a+ti-t]*(1-p[ti+1,a+ti-t+1,1])*prob[ti+1]
+    }
+  }
+  return(prob[t])
+}
+
 Y.fun <- function(t,a,tprime,phi,psi,p){
   prob <- prod(sapply(t:(tprime-2),function(x) phi[x,a+x-t,1]*psi[1,1,x,a+x-t]*(1-p[x+1,a+x-t+1,1]) ))
   return(prob)

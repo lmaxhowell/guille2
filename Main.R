@@ -151,3 +151,37 @@ op2 <- optim(rep(0,length(theta2)),
 op2$convergence
 logistic(op2$par)
 logistic(theta2)
+
+# checking chi - comparing with Blanca's code/formation of chi
+struc3 <- list("phi"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+               "delt"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+               "kap"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+               "rho"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+               "gam"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+               "p"=list("age"=list(1:Time),"time"=list(1:Time),"state"=list(1,2:6,length(states))))
+theta3 <- logit(c(0.6,0.5,0.4,0.2,0.7,0.6))
+phi <- untrans(logistic(theta2[1]),struc3$phi$age,struc3$phi$time,struc3$phi$state)
+delt <- untrans(logistic(theta2[2]),struc3$delt$age,struc3$delt$time,struc3$delt$state)
+kap <- untrans(logistic(theta2[3]),struc3$kap$age,struc3$kap$time,struc3$kap$state)
+rho <- untrans(logistic(theta2[4]),struc3$rho$age,struc3$rho$time,struc3$rho$state)
+gam <- untrans(logistic(theta2[5]),struc3$gam$age,struc3$gam$time,struc3$gam$state)
+psi <- make.psi(delt,kap,rho,gam)
+p <- untrans(c(logistic(theta2[6]),1,0),struc3$p$age,struc3$p$time,struc3$p$state)
+
+
+Chi(1,13,1,phi,psi,p)
+Chi2(1,13,1,phi,psi,p)
+1-phi[13,1,1]+phi[13,1,1]*psi[1,1,13,1]*(1-p[14,2,1])*(
+  1-phi[14,2,1]+phi[14,2,1]*psi[1,1,12,2]*(1-p[15,3,1])*(
+    1-phi[15,3,1]+phi[15,3,1]*psi[1,1,15,3]*(1-p[16,3,1])
+  )
+)
+# same number so thats good
+# now compare speeds
+library(microbenchmark)
+m <- microbenchmark(Chi(1,13,1,phi,psi,p),Chi2(1,13,1,phi,psi,p),times=2000)
+ggplot(m,aes(expr,time)) + geom_boxplot()
+ggplot(m[m$time<quantile(m$time,0.85),],aes(expr,time)) + geom_boxplot() # removing exteme outliers to see the boxplots better
+# several reps of this and the recursive function is constistantly slower
+
+
