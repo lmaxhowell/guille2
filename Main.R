@@ -144,13 +144,19 @@ op2 <- optim(rep(0,length(theta2)),
              rho.ind=6:8,
              gam.ind=9,
              p.ind=10,
-             struc=struc3,
+             struc=struc2,
              mv=mv2,
              control=list(maxit=10000,fnscale=-1),
              hessian=TRUE)
 op2$convergence
 logistic(op2$par)
 logistic(theta2)
+ci(op2$par,diag(solve(-op2$hessian)))
+logistic(ci(op2$par,diag(solve(-op2$hessian))))
+for(i in 1:length(theta2)){
+  print(logistic(ci(op2$par,diag(solve(-op2$hessian))))[i,1]<logistic(op2$par)[i] && logistic(op2$par)[i]<logistic(ci(op2$par,diag(solve(-op2$hessian))))[i,3])
+}
+
 
 # checking chi - comparing with Blanca's code/formation of chi
 struc3 <- list("phi"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),

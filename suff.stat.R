@@ -58,8 +58,10 @@ suff.stat <- function(ch){
           violations[[r]][[s]] <- append(violations[[r]][[s]],i)
         }
       }
-      r <- which(states==ch[i,wh[length(wh)]])
-      v[r,wh[length(wh)],wh[length(wh)]+Agesi[i]-1] <- v[r,wh[length(wh)],wh[length(wh)]+Agesi[i]-1] + 1
+      t <- wh[length(wh)] 
+      r <- which(states==ch[i,t])
+      a <- Agesi[i]+t-wh[1] # age at last observation
+      v[r,t,a] <- v[r,t,a] + 1
     }
   }
   mB2 <- rowSums(mB,dims = 2)
