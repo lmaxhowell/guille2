@@ -183,11 +183,32 @@ Chi2(1,13,1,phi,psi,p)
   )
 )
 # same number so thats good
+sapply(1:15,function(x){
+  c1 <- Chi(1,x,1,phi,psi,p)
+  c2 <- Chi2(1,x,1,phi,psi,p)
+  return(c1==c2)
+})
 # now compare speeds
 library(microbenchmark)
-m <- microbenchmark(Chi(1,13,1,phi,psi,p),Chi2(1,13,1,phi,psi,p),times=2000)
-ggplot(m,aes(expr,time)) + geom_boxplot()
-ggplot(m[m$time<quantile(m$time,0.85),],aes(expr,time)) + geom_boxplot() # removing exteme outliers to see the boxplots better
+m13 <- microbenchmark(Chi(1,13,1,phi,psi,p),Chi2(1,13,1,phi,psi,p),times=20000)
+ggplot(m13,aes(expr,time)) + geom_boxplot()
+ggplot(m13[m13$time<quantile(m13$time,0.85),],aes(expr,time)) + geom_boxplot() # removing exteme outliers to see the boxplots better
 # several reps of this and the recursive function is constistantly slower
+
+m8 <- microbenchmark(Chi(1,8,1,phi,psi,p),Chi2(1,8,1,phi,psi,p),times=20000)
+ggplot(m8,aes(expr,time)) + geom_boxplot()
+ggplot(m8[m8$time<quantile(m8$time,0.85),],aes(expr,time)) + geom_boxplot() # removing exteme outliers to see the boxplots better
+
+x <- 4
+assign(paste0("m",x),microbenchmark(Chi(1,x,1,phi,psi,p),Chi2(1,x,1,phi,psi,p),times=20000))
+ggplot(eval(as.name(paste0("m",x))),aes(expr,time)) + geom_boxplot()
+
+m.l <- lapply(1:15,function(x) cbind(microbenchmark(Chi(1,x,1,phi,psi,p),Chi2(1,x,1,phi,psi,p),times=20000),"x"=x) )
+m <- do.call("rbind", m.l)
+ggplot(m,aes(expr,time)) + geom_boxplot() + facet_wrap(~x)
+mq <- m[m$time<quantile(m$time,0.99),]
+ggplot(mq,aes(expr,time)) + geom_boxplot() + facet_wrap(~x)
+
+# renaming the recursive chi now so a lot of this will now be "reversed"
 
 

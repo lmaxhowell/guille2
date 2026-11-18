@@ -94,7 +94,7 @@ Pr_rs <- function(r,s,t,a,phi,psi){
   return(prob)
 }
 
-Chi <- function(r,t,a,phi,psi,p){
+Chi2 <- function(r,t,a,phi,psi,p){
   # print(c(r,t,a))
   Time <- dim(phi)[1]+1
   if(t==Time){
@@ -113,7 +113,7 @@ Chi <- function(r,t,a,phi,psi,p){
   }
 }
 
-Chi2 <- function(r,t,a,phi,psi,p){
+Chi <- function(r,t,a,phi,psi,p){
   if(t==Time){
     return(1)
   }else{
