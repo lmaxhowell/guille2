@@ -483,3 +483,70 @@ if(l==7){
   save(df,df.true,file="sim7.RData")
   save(df,df.true,op,file="sim7.big.RData")
 }
+if(l==8){
+  load("gf.storm.RData")
+  library(parallel)
+  cores <- 89
+  n <- cores*5
+  set.seed(1633762624)
+  seeds <- sample(1:.Machine$integer.max,n)
+  
+  Time <- ncol(ch)-1
+  states <- c("N","B1","LB","L_B","LB_","L_B_","S")
+  struc <- list("phi"=list("age"=list(1:Time),"time"=as.list(1:(Time-1)),"state"=list(1:length(states))),
+                "delt"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+                "kap"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+                "rho"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+                "gam"=list("age"=list(1:Time),"time"=list(1:(Time-1)),"state"=list(1:length(states))),
+                "p"=list("age"=list(1:Time),"time"=list(1:Time),"state"=list(1:length(states))))
+  theta <- logit(c(c(0.25, 0.6, 0.85, 0.1, 0.35, 0.8, 0.75, 0.65, 0.15, 0.45, 0.7, 
+                     0.9, 0.3, 0.55, 0.4),
+                   0.5,0.4,0.2,0.75,0.6))
+  par.len <- length(theta)
+  
+  ni.s <- list()
+  for(i in 1:length(ni2[1:15])){
+    ni.s[[i]] <- rep("N",length(ni2[[i]]))
+  }
+  
+  dat <- mclapply(seeds,function(x) dat.sim.wrap(theta,1:15,16,17,18,19,20,struc,ni2[1:15],ni.s,x),mc.cores=cores)
+  mv <- mclapply(1:n,function(x) suff.stat(dat[[x]]),mc.cores=cores)
+  
+  op <- mclapply(1:n, function(x) optim(rep(0,par.len),
+                                        ll.sl,
+                                        phi.ind=1:15,
+                                        delt.ind=16,
+                                        kap.ind=17,
+                                        rho.ind=18,
+                                        gam.ind=19,
+                                        p.ind=20,
+                                        struc=struc,
+                                        mv=mv[[x]],
+                                        control=list(maxit=10000,fnscale=-1),
+                                        hessian=TRUE),mc.cores=cores)
+  
+  hess.fun <- function(hess){
+    if(det(hess)<1e-08){
+      return(rep(NA,par.len))
+    }else{
+      return(diag(solve(-hess)))
+    }
+  }
+  vars <- unlist(lapply(1:n,function(x) hess.fun(op[[x]]$hessian)))
+  mles <- unlist(lapply(1:n,function(x) op[[x]]$par))
+  cis <- ci(mles,vars)
+  par.name <- factor(c(paste0("phi",1:15),"delta","kappa","rho","gamma","p"),levels=c(paste0("phi",1:15),"delta","kappa","rho","gamma","p"))
+  df <- data.frame("par"=rep(par.name,n),
+                   "mle"=unlist(lapply(1:n,function(x) logistic(op[[x]]$par))),
+                   "convergence"=rep(sapply(1:n,function(x) op[[x]]$convergence),each=par.len),
+                   "lower"=cis[,1],
+                   "mle.un"=mles,
+                   "upper"=cis[,3],
+                   "var"=unlist(lapply(1:n,function(x) hess.fun(op[[x]]$hessian))),
+                   "true"=rep(theta,n),
+                   "n"=rep(1:n,each=par.len))
+  df.true <- data.frame("par"=par.name,
+                        "mle"=logistic(theta))
+  save(df,df.true,file="sim8.RData")
+  save(df,df.true,op,file="sim8.big.RData")
+}

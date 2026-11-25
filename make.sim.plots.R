@@ -80,3 +80,11 @@ ggplot(df,aes(par,mle)) + geom_boxplot() + geom_point(data=df.true,aes(par,mle),
 #   everything else constant
 load("sim7.RData")
 ggplot(df,aes(par,mle)) + geom_boxplot() + geom_point(data=df.true,aes(par,mle),col="darkorange")
+
+# sim8:
+#   survival age classes:1
+#   survival time classes:15
+#   p constant
+#   everything else constant
+load("sim8.RData")
+ggplot(df,aes(par,mle)) + geom_boxplot() + geom_point(data=df.true,aes(par,mle),col="darkorange")
